@@ -1,0 +1,28 @@
+# Maven 构建产物
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# 日志与临时文件
+*.log
+logs/
+*.tmp
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 本地环境覆盖（数据库密码等不应入库）
+src/main/resources/application-local.yml
+.env

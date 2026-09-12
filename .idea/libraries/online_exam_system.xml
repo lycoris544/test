@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="online-exam-system">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/online-exam-system" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/online-exam-system/src/main/java" />
+      <root url="file://$PROJECT_DIR$/online-exam-system/src/test/java" />
+    </SOURCES>
+  </library>
+</component>

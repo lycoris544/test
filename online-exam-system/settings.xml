@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    项目级 Maven 配置。
+
+    为什么需要它：本机全局配置 E:\apache-maven-3.9.14\conf\settings.xml 已损坏
+    （XML 注释被压平成一行，根标签 <settings> 被写成 "-<settings ..."，导致 Maven 无法解析）。
+    这里放一份干净的最小配置，用 `mvn -s settings.xml ...` 指定即可正常构建，
+    不必改动全局文件。
+
+    如果要修全局配置：把 conf/settings.xml 里被压平的注释块删掉、恢复 <settings> 根标签即可。
+    本项目默认不改全局文件。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+
+    <!-- 沿用本机原有的本地仓库位置，避免重复下载 -->
+    <localRepository>E:\maven-repository</localRepository>
+
+    <!-- 国内网络可打开下面的阿里云镜像加速 -->
+    <!--
+    <mirrors>
+        <mirror>
+            <id>aliyun</id>
+            <mirrorOf>central</mirrorOf>
+            <name>aliyun maven</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+        </mirror>
+    </mirrors>
+    -->
+</settings>
