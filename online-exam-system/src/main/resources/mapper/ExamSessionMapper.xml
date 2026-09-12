@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.mapper.ExamSessionMapper">
+
+    <!--
+        ============================================================
+        selectScorePage：教师端「考试情况」板块
+        ============================================================
+        文档要求：「列出所有考生的考试成绩相关信息（姓名、考试科目、成绩、考试时间等）」
+
+        只统计已结束的记录（status <> 0）。进行中的考试还没有成绩，
+        提前列出来会让「平均分」之类的统计失真。
+    -->
+    <select id="selectScorePage" resultType="com.exam.entity.ExamSession">
+        SELECT
+            s.id,
+            s.course_id,
+            s.student_id,
+            s.attempt_no,
+            s.status,
+            s.start_time,
+            s.deadline,
+            s.submit_time,
+            s.score,
+            s.total_score,
+            s.create_time,
+            s.update_time,
+            u.real_name   AS student_name,
+            u.user_no     AS student_no,
+            u.department  AS department,
+            c.name        AS course_name,
+            c.code        AS course_code
+        FROM exam_session s
+        JOIN sys_user u ON u.id = s.student_id
+        JOIN course c   ON c.id = s.course_id
+        <where>
+            AND s.status &lt;&gt; 0
+            <if test="courseId != null">
+                AND s.course_id = #{courseId}
+            </if>
+            <if test="teacherId != null">
+                AND c.teacher_id = #{teacherId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.user_no LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY s.submit_time DESC, s.id DESC
+    </select>
+
+    <!--
+        ============================================================
+        selectStudentHistory：学生端「考试记录」
+        ============================================================
+        包含进行中的记录（status = 0），学生能在列表里看到未完成的考试并继续作答。
+    -->
+    <select id="selectStudentHistory" resultType="com.exam.entity.ExamSession">
+        SELECT
+            s.id,
+            s.course_id,
+            s.student_id,
+            s.attempt_no,
+            s.status,
+            s.start_time,
+            s.deadline,
+            s.submit_time,
+            s.score,
+            s.total_score,
+            s.create_time,
+            s.update_time,
+            c.name AS course_name,
+            c.code AS course_code
+        FROM exam_session s
+        JOIN course c ON c.id = s.course_id
+        <where>
+            AND s.student_id = #{studentId}
+            <if test="courseId != null">
+                AND s.course_id = #{courseId}
+            </if>
+        </where>
+        ORDER BY s.create_time DESC, s.id DESC
+    </select>
+
+</mapper>

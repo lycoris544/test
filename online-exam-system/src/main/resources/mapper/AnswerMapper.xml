@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.mapper.AnswerMapper">
+
+    <!--
+        ============================================================
+        selectBySessionId：某场考试的逐题作答明细
+        ============================================================
+        成绩详情页要把每道题、学生答案、正确答案、解析都展示出来。
+
+        两个设计点：
+        1. 用 LEFT JOIN —— 题目可能已被教师从题库删掉，但历史成绩必须还能查看。
+           题目被删时正文为空，前端按「题目已删除」渲染；得分和学生的作答
+           存在 answer 表里，不受影响。
+        2. 题干/选项/解析取的是 question 的当前值，属于「顺便展示」；
+           真正权威的是 answer 表里交卷时写入的 correct_answer 和 score 快照，
+           所以教师事后改答案不会改写历史成绩。
+    -->
+    <!--
+      必须显式声明 resultMap，不能用 resultType。
+      Answer#options 是 @TableField(exist = false)，MyBatis-Plus 生成的结果映射里
+      本来就不含它，只能靠这条 join 查询来填；而 options 是 JSON 列，
+      resultType 走的是 MyBatis 默认自动映射，挂不上 typeHandler，查出来恒为 null。
+      后果：成绩详情页看不到选项，ExamService#describeAnswer 也会因为拿不到选项
+      而退化成只显示「B」这样的裸 key，而不是「B. DISTINCT」。
+
+      也不要图省事挂 MP 自带的 JacksonTypeHandler：它没有无参构造，
+      MyBatis 会退而用 List.class 去实例化，反序列化出的是 List&lt;LinkedHashMap&gt;，
+      调用 option.getKey() 时会抛 ClassCastException。
+    -->
+    <resultMap id="answerDetailMap" type="com.exam.entity.Answer" autoMapping="true">
+        <id column="id" property="id"/>
+        <result column="options" property="options"
+                typeHandler="com.exam.common.QuestionOptionListTypeHandler"/>
+    </resultMap>
+
+    <select id="selectBySessionId" resultMap="answerDetailMap">
+        SELECT
+            a.id,
+            a.session_id,
+            a.question_id,
+            a.user_answer,
+            a.correct_answer,
+            a.is_correct,
+            a.score,
+            a.full_score,
+            q.content       AS content,
+            q.type          AS type,
+            q.options       AS options,
+            q.analysis      AS analysis,
+            q.sort_order    AS sort_order
+        FROM answer a
+        LEFT JOIN question q ON q.id = a.question_id
+        WHERE a.session_id = #{sessionId}
+        ORDER BY q.sort_order ASC, a.id ASC
+    </select>
+
+</mapper>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.mapper.CourseMapper">
+
+    <!--
+        公共列：题目数、总分通过 LEFT JOIN 聚合子查询带出。
+        用 LEFT JOIN 而不是子查询放在 SELECT 里，是为了让 H2 和 MySQL 都能走同样的执行计划。
+    -->
+    <sql id="courseColumns">
+        c.id,
+        c.name,
+        c.code,
+        c.description,
+        c.teacher_id,
+        c.duration_minutes,
+        c.exam_enabled,
+        c.create_time,
+        c.update_time,
+        u.real_name       AS teacher_name,
+        q.question_count  AS question_count,
+        q.total_score     AS total_score
+    </sql>
+
+    <sql id="courseJoins">
+        FROM course c
+        LEFT JOIN sys_user u ON u.id = c.teacher_id
+        LEFT JOIN (
+            SELECT course_id, COUNT(*) AS question_count, COALESCE(SUM(score), 0) AS total_score
+            FROM question
+            GROUP BY course_id
+        ) q ON q.course_id = c.id
+    </sql>
+
+    <sql id="courseWhere">
+        <where>
+            <if test="teacherId != null">
+                AND c.teacher_id = #{teacherId}
+            </if>
+            <if test="examEnabled != null">
+                AND c.exam_enabled = #{examEnabled}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (c.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR c.code LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectCoursePage" resultType="com.exam.entity.Course">
+        SELECT
+        <include refid="courseColumns"/>
+        <include refid="courseJoins"/>
+        <include refid="courseWhere"/>
+        ORDER BY c.create_time DESC, c.id DESC
+    </select>
+
+    <select id="selectCourseDetail" resultType="com.exam.entity.Course">
+        SELECT
+        <include refid="courseColumns"/>
+        <include refid="courseJoins"/>
+        WHERE c.id = #{id}
+    </select>
+
+</mapper>

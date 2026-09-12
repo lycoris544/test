@@ -1,0 +1,72 @@
+server:
+  port: 3340
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: online-exam-system
+
+  # ------------------------------------------------------------------
+  # 默认使用 H2 内存库：clone 下来直接 `mvn spring-boot:run` 就能起，
+  # 不需要装 MySQL。启动时自动执行 schema.sql + data.sql。
+  #
+  # 切换 MySQL 用：--spring.profiles.active=mysql
+  # ------------------------------------------------------------------
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:examdb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password: ''
+  h2:
+    console:
+      # 浏览器打开 http://localhost:8080/api/h2-console 可直接看数据
+      enabled: true
+      path: /h2-console
+  sql:
+    init:
+      mode: always
+      # encoding 必须显式指定为 UTF-8。Spring 默认用平台编码读脚本，
+      # 在中文 Windows 上是 GBK，会把 UTF-8 的中文种子数据读成乱码
+      # （表现为登录返回的姓名是「寮犱笁」这种鬼东西）。
+      encoding: UTF-8
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+      # H2 的建表脚本同时兼容 MySQL，通过 MODE=MySQL 保证语法一致
+      continue-on-error: false
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.exam.entity
+  configuration:
+    # 数据库 snake_case -> Java camelCase
+    map-underscore-to-camel-case: true
+    # 让 MyBatis 把 null 也放进 Map，避免前端拿到缺字段的对象
+    call-setters-on-nulls: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+# ------------------------------------------------------------------
+# JWT 配置。生产环境务必通过环境变量覆盖 jwt.secret。
+# 密钥长度必须 >= 32 字节，否则 HS256 会直接抛异常（jjwt 0.11 起强制校验）。
+# ------------------------------------------------------------------
+jwt:
+  secret: ${JWT_SECRET:online-exam-system-dev-secret-key-please-change-in-production}
+  # token 有效期（毫秒），默认 24 小时
+  expiration: 86400000
+  header: Authorization
+  prefix: "Bearer "
+
+logging:
+  level:
+    root: info
+    com.exam: debug

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.mapper.QuestionMapper">
+
+    <!--
+      本 Mapper 没有 XML 语句，查询全部在 QuestionMapper 接口的 default 方法里，
+      用 MyBatis-Plus 内置的 selectList / selectPage 拼条件。
+
+      原来这里有一条 selectQuestionPage，用的是 resultType="com.exam.entity.Question"。
+      这种写法走 MyBatis 默认自动映射，不会应用 question.options 上的 typeHandler，
+      导致查出来的 options 恒为 null —— 教师端题库看不到选项，
+      试卷下发给学生后单选、多选题也没有选项可点。
+
+      如果以后确实需要手写 SQL，不能再用 resultType，必须显式声明 resultMap
+      并给 options 挂上 QuestionOptionListTypeHandler，例如：
+
+        <resultMap id="questionMap" type="com.exam.entity.Question" autoMapping="true">
+            <result column="options" property="options"
+                    typeHandler="com.exam.common.QuestionOptionListTypeHandler"/>
+        </resultMap>
+
+      直接挂 MP 自带的 JacksonTypeHandler 是不行的：它没有无参构造，
+      MyBatis 会退而用 List.class 去实例化它，反序列化得到的是
+      List&lt;LinkedHashMap&gt; 而不是 List&lt;QuestionOption&gt;，
+      到判分、成绩回顾时调用 option.getKey() 就会抛 ClassCastException。
+    -->
+
+</mapper>

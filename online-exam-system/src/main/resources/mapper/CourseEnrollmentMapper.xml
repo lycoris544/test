@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.mapper.CourseEnrollmentMapper">
+
+    <!--
+        ============================================================
+        selectStudentCourses：学生选课列表 + 考试状态
+        ============================================================
+
+        文档要求：
+          「课程列表会保存考试状态。若已参加过该课程考试，旁边显示分数，
+            且不能继续考试，除非点击重考。」
+
+        由此推出每个学生的每门课有三种情形，用 can_start 区分：
+          1. 有进行中的考试             -> can_start = true（继续未完成的答卷）
+          2. 没有已结束的考试           -> can_start = true（首次开考）
+          3. 已考过且无进行中记录       -> can_start = false（要考只能走「重考」接口）
+
+        外层再包一层派生表，是因为 SELECT 里要按内层算好的 finished_count / ongoing_count
+        做判断，而同一层不能互相引用列别名。
+    -->
+    <select id="selectStudentCourses" resultType="com.exam.entity.CourseEnrollment">
+        SELECT t.*,
+               CASE
+                   WHEN t.finished_count = 0 THEN 1
+                   WHEN t.ongoing_count &gt; 0 THEN 1
+                   ELSE 0
+               END AS can_start
+        FROM (
+            SELECT
+                e.id,
+                e.course_id,
+                e.student_id,
+                e.create_time,
+                c.name              AS course_name,
+                c.code              AS course_code,
+                c.duration_minutes,
+                c.exam_enabled,
+                u.real_name         AS teacher_name,
+                q.question_count,
+                q.total_score,
+
+                (SELECT COUNT(*) FROM exam_session s
+                  WHERE s.student_id = e.student_id
+                    AND s.course_id = e.course_id
+                    AND s.status = 0) AS ongoing_count,
+
+                (SELECT COUNT(*) FROM exam_session s
+                  WHERE s.student_id = e.student_id
+                    AND s.course_id = e.course_id
+                    AND s.status &lt;&gt; 0) AS finished_count,
+
+                (SELECT MAX(s.score) FROM exam_session s
+                  WHERE s.student_id = e.student_id
+                    AND s.course_id = e.course_id
+                    AND s.status &lt;&gt; 0) AS last_score,
+
+                COALESCE(
+                    (SELECT s.status FROM exam_session s
+                      WHERE s.student_id = e.student_id
+                        AND s.course_id = e.course_id
+                        AND s.status &lt;&gt; 0
+                      ORDER BY s.attempt_no DESC
+                      LIMIT 1),
+                    (SELECT s.status FROM exam_session s
+                      WHERE s.student_id = e.student_id
+                        AND s.course_id = e.course_id
+                        AND s.status = 0
+                      ORDER BY s.attempt_no DESC
+                      LIMIT 1)
+                ) AS exam_status
+
+            FROM course_enrollment e
+            JOIN course c ON c.id = e.course_id
+            LEFT JOIN sys_user u ON u.id = c.teacher_id
+            LEFT JOIN (
+                SELECT course_id, COUNT(*) AS question_count, COALESCE(SUM(score), 0) AS total_score
+                FROM question
+                GROUP BY course_id
+            ) q ON q.course_id = c.id
+            WHERE e.student_id = #{studentId}
+        ) t
+        ORDER BY t.course_code ASC
+    </select>
+
+    <!--
+        ============================================================
+        selectCourseStudents：教师端查看某课程的选课名单
+        ============================================================
+        附带该生在这门课的已考次数和最高分。
+    -->
+    <select id="selectCourseStudents" resultType="com.exam.entity.CourseEnrollment">
+        SELECT
+            e.id,
+            e.course_id,
+            e.student_id,
+            e.create_time,
+            s.real_name  AS student_name,
+            s.user_no    AS student_no,
+            s.department AS department,
+            (SELECT COUNT(*) FROM exam_session es
+              WHERE es.student_id = e.student_id AND es.course_id = e.course_id
+                AND es.status &lt;&gt; 0) AS finished_count,
+            (SELECT MAX(es.score) FROM exam_session es
+              WHERE es.student_id = e.student_id AND es.course_id = e.course_id
+                AND es.status &lt;&gt; 0) AS last_score
+        FROM course_enrollment e
+        JOIN sys_user s ON s.id = e.student_id
+        WHERE e.course_id = #{courseId}
+        ORDER BY s.user_no ASC
+    </select>
+
+</mapper>

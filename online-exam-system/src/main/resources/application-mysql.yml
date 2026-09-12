@@ -1,0 +1,28 @@
+# ------------------------------------------------------------------
+# MySQL 环境：--spring.profiles.active=mysql
+#
+# 使用前先建库，然后执行 src/main/resources/db/schema-mysql.sql 建表，
+# 再执行 db/data.sql 灌入演示数据（data.sql 是 H2/MySQL 通用的）。
+#
+#   CREATE DATABASE exam_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+#   mysql -uroot -p exam_db < src/main/resources/db/schema-mysql.sql
+#   mysql -uroot -p exam_db < src/main/resources/db/data.sql
+# ------------------------------------------------------------------
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:exam_db}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+  h2:
+    # MySQL 环境下关掉 H2 控制台
+    console:
+      enabled: false
+  sql:
+    # 表结构由 schema-mysql.sql 手动建，这里不自动初始化，避免误删数据
+    init:
+      mode: never
+
+logging:
+  level:
+    com.exam: info
